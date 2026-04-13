@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Dashboard</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+margin:0;
+}
+
+.container{
+width:400px;
+margin:auto;
+margin-top:80px;
+background:#1e293b;
+padding:30px;
+border-radius:12px;
+text-align:center;
+box-shadow:0 10px 25px rgba(0,0,0,0.5);
+}
+
+input{
+padding:12px;
+width:90%;
+margin:10px;
+border:none;
+border-radius:8px;
+background:#0f172a;
+color:white;
+}
+
+button{
+padding:10px 20px;
+margin:5px;
+border:none;
+border-radius:8px;
+background:#2563eb;
+color:white;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+background:#1d4ed8;
+}
+
+.logout{
+background:#ef4444;
+}
+
+.logout:hover{
+background:#dc2626;
+}
+
+#popup{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.8);
+justify-content:center;
+align-items:center;
+}
+
+.popup-box{
+background:black;
+padding:30px;
+border-radius:10px;
+text-align:center;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Welcome {{username}}</h2>
+
+<h3>Balance: ₹ <span id="balance">{{balance}}</span></h3>
+
+<input id="amount" placeholder="Enter Amount">
+
+<br>
+
+<button onclick="deposit()">Deposit</button>
+<button onclick="withdraw()">Withdraw</button>
+
+<br><br>
+
+<a href="/logout"><button class="logout">Logout</button></a>
+
+</div>
+
+
+<div id="popup">
+
+<div class="popup-box">
+
+<h2>Scan RFID Card</h2>
+<p id="scanstatus">Waiting for card...</p>
+
+</div>
+
+</div>
+
+
+<script>
+
+let scanning=false
+
+function deposit(){
+
+let amount=document.getElementById("amount").value
+
+fetch("/deposit",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({amount:amount})
+})
+.then(res=>res.json())
+.then(data=>{
+document.getElementById("balance").innerText=data.balance
+document.getElementById("amount").value=""
+})
+
+}
+
+function withdraw(){
+
+if(scanning) return
+
+scanning=true
+
+document.getElementById("popup").style.display="flex"
+document.getElementById("scanstatus").innerText="Waiting for card..."
+
+checkRFID()
+
+}
+
+function checkRFID(){
+
+fetch("/get_rfid")
+.then(res=>res.json())
+.then(data=>{
+
+if(data.uid!=""){
+
+document.getElementById("scanstatus").innerText="Card detected"
+
+let amount=document.getElementById("amount").value
+
+fetch("/withdraw",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({amount:amount})
+})
+.then(res=>res.json())
+.then(result=>{
+
+if(result.status=="success"){
+document.getElementById("balance").innerText=result.balance
+alert("Withdrawal successful")
+}else{
+alert(result.status)
+}
+
+document.getElementById("amount").value=""
+document.getElementById("popup").style.display="none"
+scanning=false
+
+})
+
+}else{
+setTimeout(checkRFID,1000)
+}
+
+})
+
+}
+
+</script>
+
+</body>
+</html>
